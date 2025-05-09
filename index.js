@@ -1,24 +1,38 @@
 const express = require("express");
+const { OpenAI } = require("openai");
+require("dotenv").config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("EcoDivers ChatBot is running!");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-app.post("/webhook", (req, res) => {
+app.get("/", (req, res) => {
+  res.send("EcoDivers GPT ChatBot is live!");
+});
+
+app.post("/webhook", async (req, res) => {
   const userMessage = req.body.message || "";
-  let reply = "안녕하세요! 무엇을 도와드릴까요?";
-
-  if (userMessage.includes("호핑")) reply = "아일랜드 호핑투어는 보트로 진행돼요! 😊";
-  else if (userMessage.includes("자격증")) reply = "PADI, SDI, UTA 자격증 과정 운영 중입니다!";
-  else if (userMessage.includes("장비")) reply = "장비는 모두 무료로 제공돼요. 수영복만 챙겨오세요!";
-
-  res.json({ reply });
+  try {
+    const chatCompletion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "You are a friendly diving tour and training expert from EcoDivers in Jeju. Answer kindly and clearly." },
+        { role: "user", content: userMessage },
+      ],
+    });
+    const reply = chatCompletion.choices[0].message.content;
+    res.json({ reply });
+  } catch (error) {
+    console.error("Error from OpenAI:", error.message);
+    res.status(500).json({ reply: "Sorry, there was a problem responding with GPT." });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`Chatbot server is running on port ${PORT}`);
+  console.log(`EcoDivers ChatBot server running on port ${PORT}`);
 });
